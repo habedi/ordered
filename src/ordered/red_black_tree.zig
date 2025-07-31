@@ -1,0 +1,453 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const testing = std.testing;
+const assert = std.debug.assert;
+
+/// Red-Black Tree implementation
+/// A self-balancing binary search tree with O(log n) operations
+pub fn RedBlackTree(comptime T: type, comptime Context: type) type {
+    return struct {
+        const Self = @This();
+
+        pub const Color = enum { red, black };
+
+        pub const Node = struct {
+            data: T,
+            color: Color,
+            left: ?*Node,
+            right: ?*Node,
+            parent: ?*Node,
+
+            fn isRed(node: ?*Node) bool {
+                return if (node) |n| n.color == .red else false;
+            }
+
+            fn isBlack(node: ?*Node) bool {
+                return if (node) |n| n.color == .black else true; // NIL nodes are black
+            }
+        };
+
+        root: ?*Node,
+        allocator: Allocator,
+        context: Context,
+        size: usize,
+
+        pub fn init(allocator: Allocator, context: Context) Self {
+            return Self{
+                .root = null,
+                .allocator = allocator,
+                .context = context,
+                .size = 0,
+            };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.clear();
+        }
+
+        pub fn clear(self: *Self) void {
+            self.clearNode(self.root);
+            self.root = null;
+            self.size = 0;
+        }
+
+        fn clearNode(self: *Self, node: ?*Node) void {
+            if (node) |n| {
+                self.clearNode(n.left);
+                self.clearNode(n.right);
+                self.allocator.destroy(n);
+            }
+        }
+
+        pub fn count(self: Self) usize {
+            return self.size;
+        }
+
+        pub fn insert(self: *Self, data: T) !void {
+            // Check if key already exists first to avoid unnecessary allocation
+            if (self.find(data)) |existing| {
+                existing.data = data;
+                return;
+            }
+
+            const new_node = try self.allocator.create(Node);
+            new_node.* = Node{
+                .data = data,
+                .color = .red, // New nodes are always red
+                .left = null,
+                .right = null,
+                .parent = null,
+            };
+
+            if (self.root == null) {
+                self.root = new_node;
+                new_node.color = .black; // Root is always black
+                self.size = 1;
+                return;
+            }
+
+            // Standard BST insertion
+            var current = self.root;
+            var parent: ?*Node = null;
+
+            while (current != null) {
+                parent = current;
+                if (self.context.lessThan(data, current.?.data)) {
+                    current = current.?.left;
+                } else {
+                    current = current.?.right;
+                }
+            }
+
+            new_node.parent = parent;
+            if (self.context.lessThan(data, parent.?.data)) {
+                parent.?.left = new_node;
+            } else {
+                parent.?.right = new_node;
+            }
+
+            self.size += 1;
+            self.fixInsert(new_node);
+        }
+
+        fn fixInsert(self: *Self, node: *Node) void {
+            var current = node;
+
+            while (current.parent != null and Node.isRed(current.parent)) {
+                const parent = current.parent.?;
+                const grandparent = parent.parent orelse break;
+
+                if (parent == grandparent.left) {
+                    const uncle = grandparent.right;
+
+                    if (Node.isRed(uncle)) {
+                        // Case 1: Uncle is red
+                        parent.color = .black;
+                        uncle.?.color = .black;
+                        grandparent.color = .red;
+                        current = grandparent;
+                    } else {
+                        if (current == parent.right) {
+                            // Case 2: Uncle is black, current is right child
+                            current = parent;
+                            self.rotateLeft(current);
+                        }
+                        // Case 3: Uncle is black, current is left child
+                        const new_parent = current.parent orelse break;
+                        const new_grandparent = new_parent.parent orelse break;
+                        new_parent.color = .black;
+                        new_grandparent.color = .red;
+                        self.rotateRight(new_grandparent);
+                    }
+                } else {
+                    const uncle = grandparent.left;
+
+                    if (Node.isRed(uncle)) {
+                        // Case 1: Uncle is red
+                        parent.color = .black;
+                        uncle.?.color = .black;
+                        grandparent.color = .red;
+                        current = grandparent;
+                    } else {
+                        if (current == parent.left) {
+                            // Case 2: Uncle is black, current is left child
+                            current = parent;
+                            self.rotateRight(current);
+                        }
+                        // Case 3: Uncle is black, current is right child
+                        const new_parent = current.parent orelse break;
+                        const new_grandparent = new_parent.parent orelse break;
+                        new_parent.color = .black;
+                        new_grandparent.color = .red;
+                        self.rotateLeft(new_grandparent);
+                    }
+                }
+            }
+
+            if (self.root) |root| root.color = .black; // Root is always black
+        }
+
+        pub fn remove(self: *Self, data: T) bool {
+            const node = self.find(data) orelse return false;
+            self.removeNode(node);
+            self.size -= 1;
+            return true;
+        }
+
+        fn removeNode(self: *Self, node: *Node) void {
+            var deleted_node = node;
+            var deleted_color = deleted_node.color;
+            var replacement: ?*Node = null;
+
+            if (node.left == null) {
+                replacement = node.right;
+                self.transplant(node, node.right);
+            } else if (node.right == null) {
+                replacement = node.left;
+                self.transplant(node, node.left);
+            } else {
+                deleted_node = self.findMinimum(node.right.?);
+                deleted_color = deleted_node.color;
+                replacement = deleted_node.right;
+
+                if (deleted_node.parent == node) {
+                    if (replacement) |r| r.parent = deleted_node;
+                } else {
+                    self.transplant(deleted_node, deleted_node.right);
+                    deleted_node.right = node.right;
+                    if (deleted_node.right) |right| right.parent = deleted_node;
+                }
+
+                self.transplant(node, deleted_node);
+                deleted_node.left = node.left;
+                if (deleted_node.left) |left| left.parent = deleted_node;
+                deleted_node.color = node.color;
+            }
+
+            // Fix red-black properties before freeing the node
+            if (deleted_color == .black) {
+                self.fixDelete(replacement);
+            }
+
+            self.allocator.destroy(node);
+        }
+
+        fn fixDelete(self: *Self, node: ?*Node) void {
+            var current = node;
+
+            while (current != self.root and Node.isBlack(current)) {
+                if (current) |curr| {
+                    const parent = curr.parent orelse break;
+
+                    if (curr == parent.left) {
+                        var sibling = parent.right;
+
+                        if (Node.isRed(sibling)) {
+                            if (sibling) |s| s.color = .black;
+                            parent.color = .red;
+                            self.rotateLeft(parent);
+                            sibling = parent.right;
+                        }
+
+                        if (sibling) |s| {
+                            if (Node.isBlack(s.left) and Node.isBlack(s.right)) {
+                                s.color = .red;
+                                current = parent;
+                            } else {
+                                if (Node.isBlack(s.right)) {
+                                    if (s.left) |left| left.color = .black;
+                                    s.color = .red;
+                                    self.rotateRight(s);
+                                    sibling = parent.right;
+                                }
+
+                                if (sibling) |new_s| {
+                                    new_s.color = parent.color;
+                                    parent.color = .black;
+                                    if (new_s.right) |right| right.color = .black;
+                                    self.rotateLeft(parent);
+                                }
+                                current = self.root;
+                            }
+                        }
+                    } else {
+                        var sibling = parent.left;
+
+                        if (Node.isRed(sibling)) {
+                            if (sibling) |s| s.color = .black;
+                            parent.color = .red;
+                            self.rotateRight(parent);
+                            sibling = parent.left;
+                        }
+
+                        if (sibling) |s| {
+                            if (Node.isBlack(s.right) and Node.isBlack(s.left)) {
+                                s.color = .red;
+                                current = parent;
+                            } else {
+                                if (Node.isBlack(s.left)) {
+                                    if (s.right) |right| right.color = .black;
+                                    s.color = .red;
+                                    self.rotateLeft(s);
+                                    sibling = parent.left;
+                                }
+
+                                if (sibling) |new_s| {
+                                    new_s.color = parent.color;
+                                    parent.color = .black;
+                                    if (new_s.left) |left| left.color = .black;
+                                    self.rotateRight(parent);
+                                }
+                                current = self.root;
+                            }
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            if (current) |c| c.color = .black;
+        }
+
+        fn transplant(self: *Self, old: *Node, new: ?*Node) void {
+            if (old.parent == null) {
+                self.root = new;
+            } else if (old.parent) |parent| {
+                if (old == parent.left) {
+                    parent.left = new;
+                } else {
+                    parent.right = new;
+                }
+            }
+
+            if (new) |n| n.parent = old.parent;
+        }
+
+        fn rotateLeft(self: *Self, node: *Node) void {
+            const right = node.right orelse return;
+            node.right = right.left;
+
+            if (right.left) |left| left.parent = node;
+
+            right.parent = node.parent;
+
+            if (node.parent == null) {
+                self.root = right;
+            } else if (node.parent) |parent| {
+                if (node == parent.left) {
+                    parent.left = right;
+                } else {
+                    parent.right = right;
+                }
+            }
+
+            right.left = node;
+            node.parent = right;
+        }
+
+        fn rotateRight(self: *Self, node: *Node) void {
+            const left = node.left orelse return;
+            node.left = left.right;
+
+            if (left.right) |right| right.parent = node;
+
+            left.parent = node.parent;
+
+            if (node.parent == null) {
+                self.root = left;
+            } else if (node.parent) |parent| {
+                if (node == parent.right) {
+                    parent.right = left;
+                } else {
+                    parent.left = left;
+                }
+            }
+
+            left.right = node;
+            node.parent = left;
+        }
+
+        pub fn find(self: Self, data: T) ?*Node {
+            var current = self.root;
+
+            while (current) |node| {
+                if (self.context.lessThan(data, node.data)) {
+                    current = node.left;
+                } else if (self.context.lessThan(node.data, data)) {
+                    current = node.right;
+                } else {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
+        pub fn contains(self: Self, data: T) bool {
+            return self.find(data) != null;
+        }
+
+        fn findMinimum(self: Self, node: *Node) *Node {
+            _ = self; // Mark as intentionally unused
+            var current = node;
+            while (current.left) |left| {
+                current = left;
+            }
+            return current;
+        }
+
+        pub fn minimum(self: Self, node: ?*Node) ?*Node {
+            const start = node orelse self.root orelse return null;
+            return self.findMinimum(start);
+        }
+
+        pub fn maximum(self: Self, node: ?*Node) ?*Node {
+            var current = node orelse self.root orelse return null;
+
+            while (current.right) |right| {
+                current = right;
+            }
+
+            return current;
+        }
+
+        /// Iterator for in-order traversal
+        pub const Iterator = struct {
+            stack: std.ArrayList(*Node),
+
+            pub fn init(allocator: Allocator, root: ?*Node) !Iterator {
+                var it = Iterator{
+                    .stack = std.ArrayList(*Node).init(allocator),
+                };
+
+                // Initialize stack with leftmost path
+                var node = root;
+                while (node) |n| {
+                    try it.stack.append(n);
+                    node = n.left;
+                }
+
+                return it;
+            }
+
+            pub fn deinit(self: *Iterator) void {
+                self.stack.deinit();
+            }
+
+            pub fn next(self: *Iterator) !?*Node {
+                if (self.stack.items.len == 0) return null;
+
+                const node = self.stack.pop();
+
+                // Add right subtree to stack
+                var current = node.right;
+                while (current) |n| {
+                    try self.stack.append(n);
+                    current = n.left;
+                }
+
+                return node;
+            }
+        };
+
+        pub fn iterator(self: Self) !Iterator {
+            return Iterator.init(self.allocator, self.root);
+        }
+    };
+}
+
+/// Default context for comparable types
+pub fn DefaultContext(comptime T: type) type {
+    return struct {
+        pub fn lessThan(self: @This(), a: T, b: T) bool {
+            _ = self;
+            return a < b;
+        }
+    };
+}
+
+// Convenience type aliases
+pub fn RedBlackTreeManaged(comptime T: type) type {
+    return RedBlackTree(T, DefaultContext(T));
+}
