@@ -41,8 +41,8 @@ red-black tree.
 | 6 | Trie           | $O(m)$                | $O(n \cdot m)$    | $O(m)$                | A prefix tree used for efficient string-based operations like prefix matching. Here, $m$ is the length of the key.                                                       |
 
 > [!IMPORTANT]
-> Zig-DbC is in early development, so bugs and breaking API changes are expected.
-> Please use the [issues page](https://github.com/habedi/zig-dbc/issues) to report bugs or request features.
+> Ordered is in early development, so bugs and breaking API changes are expected.
+> Please use the [issues page](https://github.com/habedi/ordered/issues) to report bugs or request features.
 
 ---
 
