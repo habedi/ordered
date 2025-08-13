@@ -31,6 +31,15 @@ red-black tree.
     - [`Trie`](src/trie.zig): A prefix tree for fast retrieval of keys with common prefixes.
     - [`RedBlackTree`](src/red_black_tree.zig): A self-balancing binary search tree that maintains order of keys.
 
+| # | Name           | Build Complexity      | Memory Complexity | Search Complexity     | Description                                                                                                                                                              |
+|---|----------------|-----------------------|-------------------|-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1 | B-Tree Map     | $O(\log n)$           | $O(n)$            | $O(\log n)$           | A self-balancing tree that is optimized for disk I/O. It maintains sorted data and is efficient for large datasets.                                                      |
+| 2 | Cartesian tree | $O(\log n)$ (average) | $O(n)$            | $O(\log n)$ (average) | A binary tree that maintains both a binary search tree property on keys and a heap property on priorities.                                                               |
+| 3 | Red-Black tree | $O(\log n)$           | $O(n)$            | $O(\log n)$           | A self-balancing binary search tree. Operations like insertion and deletion take logarithmic time.                                                                       |
+| 4 | Skip List      | $O(\log n)$ (average) | $O(n)$            | $O(\log n)$ (average) | A probabilistic data structure that uses multiple layers of sorted linked lists. It is simpler to implement than balanced trees and is often used in concurrent systems. |
+| 5 | Sorted Set     | $O(n)$                | $O(n)$            | $O(\log n)$           | A sorted array that provides fast lookups via binary search but slow insertions and deletions because elements need to be shifted.                                       |
+| 6 | Trie           | $O(m)$                | $O(n \cdot m)$    | $O(m)$                | A prefix tree used for efficient string-based operations like prefix matching. Here, $m$ is the length of the key.                                                       |
+
 > [!IMPORTANT]
 > Zig-DbC is in early development, so bugs and breaking API changes are expected.
 > Please use the [issues page](https://github.com/habedi/zig-dbc/issues) to report bugs or request features.
