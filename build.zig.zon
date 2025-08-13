@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .dbc = .{
-            .url = "https://github.com/habedi/zig-dbc/archive/v0.1.0.tar.gz",
-            .hash = "zig_dbc-0.1.0-VjRHfLVvAABdMwGT4jSQksMbvSUpWPsSG41qhUAmCJuk",
+            .url = "https://github.com/habedi/zig-dbc/archive/v0.2.0.tar.gz",
+            .hash = "zig_dbc-0.2.0-VjRHfH55AAA-U_pePJCIMaldTa3AKGBd0HiLLPslNDtt",
         },
     },
     .paths = .{
