@@ -43,7 +43,7 @@ build: ## Build project (e.g. 'make build BUILD_TYPE=ReleaseSmall' or 'make buil
 
 rebuild: clean build  ## clean and build
 
-run: ## Run an example (e.g. 'make run EXAMPLE=sorted_set' or 'make run' to run all examples)
+run: ## Run an example (e.g. 'make run EXAMPLE=e1_btree_map' or 'make run' to run all examples)
 	@if [ "$(EXAMPLE)" = "all" ]; then \
 	   echo "--> Running all examples..."; \
 	   for ex in $(EXAMPLES); do \
