@@ -10,6 +10,7 @@
 [![CodeFactor](https://img.shields.io/codefactor/grade/github/habedi/ordered?label=code%20quality&style=flat&labelColor=282c34&logo=codefactor)](https://www.codefactor.io/repository/github/habedi/ordered)
 [![Zig Version](https://img.shields.io/badge/Zig-0.14.1-orange?logo=zig&labelColor=282c34)](https://ziglang.org/download/)
 [![Docs](https://img.shields.io/github/v/tag/habedi/ordered?label=docs&color=blue&style=flat&labelColor=282c34&logo=read-the-docs)](https://habedi.github.io/ordered/)
+[![Examples](https://img.shields.io/github/v/tag/habedi/ordered?label=examples&color=green&style=flat&labelColor=282c34&logo=zig)](https://github.com/habedi/ordered/tree/main/examples)
 [![Release](https://img.shields.io/github/release/habedi/ordered.svg?label=release&style=flat&labelColor=282c34&logo=github)](https://github.com/habedi/ordered/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-007ec6?label=license&style=flat&labelColor=282c34&logo=open-source-initiative)](https://github.com/habedi/ordered/blob/main/LICENSE)
 
